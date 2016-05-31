@@ -16,6 +16,18 @@
 
 package com.navercorp.pinpoint.plugin.activemq.client.interceptor;
 
+import java.net.Socket;
+import java.net.SocketAddress;
+
+import javax.jms.Message;
+
+import org.apache.activemq.ActiveMQConnection;
+import org.apache.activemq.ActiveMQMessageProducer;
+import org.apache.activemq.ActiveMQSession;
+import org.apache.activemq.command.ActiveMQDestination;
+import org.apache.activemq.transport.Transport;
+import org.apache.activemq.transport.TransportFilter;
+import org.apache.activemq.transport.failover.FailoverTransport;
 import com.navercorp.pinpoint.bootstrap.config.Filter;
 import com.navercorp.pinpoint.bootstrap.context.MethodDescriptor;
 import com.navercorp.pinpoint.bootstrap.context.SpanEventRecorder;
@@ -33,16 +45,6 @@ import com.navercorp.pinpoint.plugin.activemq.client.ActiveMQClientUtils;
 import com.navercorp.pinpoint.plugin.activemq.client.field.getter.ActiveMQSessionGetter;
 import com.navercorp.pinpoint.plugin.activemq.client.field.getter.SocketGetter;
 import com.navercorp.pinpoint.plugin.activemq.client.field.getter.TransportGetter;
-import org.apache.activemq.ActiveMQConnection;
-import org.apache.activemq.ActiveMQMessageProducer;
-import org.apache.activemq.ActiveMQSession;
-import org.apache.activemq.command.ActiveMQDestination;
-import org.apache.activemq.transport.Transport;
-import org.apache.activemq.transport.TransportFilter;
-
-import javax.jms.Message;
-import java.net.Socket;
-import java.net.SocketAddress;
 
 /**
  * @author HyunGil Jeong
@@ -190,6 +192,7 @@ public class ActiveMQMessageProducerSendInterceptor implements AroundInterceptor
             }
             return false;
         }
+        
         Transport transport = getRootTransport(((TransportGetter) connection)._$PINPOINT$_getTransport());
         if (!(transport instanceof SocketGetter)) {
             if (isDebug) {
@@ -205,6 +208,16 @@ public class ActiveMQMessageProducerSendInterceptor implements AroundInterceptor
         while (possiblyWrappedTransport instanceof TransportFilter) {
             possiblyWrappedTransport = ((TransportFilter) possiblyWrappedTransport).getNext();
         }
+        if(possiblyWrappedTransport instanceof FailoverTransport){
+        	if (isDebug) {
+                logger.debug("using FailoverTransport({}).", ((FailoverTransport) possiblyWrappedTransport).getConnectedTransportURI());
+            }
+        	possiblyWrappedTransport = ((FailoverTransport) possiblyWrappedTransport).getConnectedTransport();
+        	
+        	 while (possiblyWrappedTransport instanceof TransportFilter) {
+                 possiblyWrappedTransport = ((TransportFilter) possiblyWrappedTransport).getNext();
+             }
+       }
         return possiblyWrappedTransport;
     }
 }
