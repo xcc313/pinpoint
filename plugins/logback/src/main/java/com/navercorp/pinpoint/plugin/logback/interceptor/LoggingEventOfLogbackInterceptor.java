@@ -49,10 +49,14 @@ public class LoggingEventOfLogbackInterceptor implements AroundInterceptor0 {
             MDC.remove(TRANSACTION_ID);
             MDC.remove(SPAN_ID);
             return;
-        } else {
-            MDC.put(TRANSACTION_ID, trace.getTraceId().getTransactionId());
-            MDC.put(SPAN_ID, String.valueOf(trace.getTraceId().getSpanId()));
-        }
+		} else {
+			//enable loggingTransactionInfo
+			SpanRecorder recorder = trace.getSpanRecorder();
+			recorder.recordLogging(LoggingInfo.LOGGED);
+			
+			MDC.put(TRANSACTION_ID, trace.getTraceId().getTransactionId());
+			MDC.put(SPAN_ID, String.valueOf(trace.getTraceId().getSpanId()));
+		}
     }
 
     @IgnoreMethod
